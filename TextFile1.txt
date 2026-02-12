@@ -1,0 +1,156 @@
+﻿✅ Förklaring av hela projektet (på svenska) – “Community Web API”
+1) Översikt – vad jag har byggt
+
+Jag har byggt ett Web API i ASP.NET Core för ett community där användare kan:
+
+skapa konto och logga in
+
+läsa och söka blogginlägg (utan inloggning)
+
+skapa, uppdatera och ta bort egna inlägg (inloggad användare)
+
+kategorisera inlägg (kategorier sparas i egen tabell)
+
+kommentera andra användares inlägg (men inte sina egna)
+
+All data sparas i en SQL Server-databas via Entity Framework Core.
+API:t är dokumenterat i Swagger och kan testas via Postman.
+
+2) Databasmodell – tabeller och relationer
+
+Jag har fyra tabeller:
+
+Users: Id, Username, Email, PasswordHash
+
+Categories: Id, Name
+
+Posts: Id, Title, Text, CreatedAt, UserId, CategoryId
+
+Comments: Id, Text, CreatedAt, PostId, UserId
+
+Relationer:
+
+En User kan ha många Posts
+
+En User kan ha många Comments
+
+En Category kan ha många Posts
+
+En Post kan ha många Comments
+
+3) Seed-data (för att underlätta demo)
+
+I AppDbContext.OnModelCreating seedar jag kategorier automatiskt:
+
+Training
+
+Fashion
+
+Health
+
+Det gör att jag direkt kan skapa inlägg utan att först skapa kategorier manuellt.
+
+4) Delete-behavior (viktigt och bra att nämna)
+
+Jag har konfigurerat relationerna så här:
+
+Post → Comments = Cascade
+Om man tar bort en post, tas dess kommentarer bort automatiskt.
+
+User → Comments = Restrict
+Jag använder Restrict för att undvika “multiple cascade paths” i SQL Server.
+Det betyder att man inte kan ta bort en användare om den har kommentarer kvar.
+
+✅ Det här visar att jag tänker på databassäkerhet och referensintegritet.
+
+✅ 5) API-endpoints – vad jag visar i Swagger/Postman
+A) AuthController – Register & Login
+
+POST /api/Auth/register
+Skapar ett nytt konto. Jag kollar att username och email är unika och sparar lösenord som hash (SHA256).
+
+POST /api/Auth/login
+Validerar username + password (hash-jämförelse) och returnerar userId enligt kravet i uppgiften.
+
+B) UsersController – Update & Delete user
+
+PUT /api/Users
+Uppdaterar username/email/password. Jag kontrollerar att username/email inte redan används av någon annan.
+
+DELETE /api/Users
+Tar bort en användare. (Kan påverkas av Restrict om user har comments.)
+
+C) CategoriesController – läsa + skapa kategorier
+
+GET /api/Categories
+Hämtar alla kategorier.
+
+POST /api/Categories
+Skapar en ny kategori, förhindrar dubletter (case-insensitive) och returnerar 201.
+
+D) PostsController – allt för blogginlägg
+
+GET /api/Posts
+Hämtar alla posts, inklusive kategori och författare.
+
+GET /api/Posts/search?title=...
+Söker på titel.
+
+GET /api/Posts/by-category/{categoryId}
+Filtrerar på kategori.
+
+POST /api/Posts
+Skapar en post (kräver giltigt userId + categoryId).
+
+PUT /api/Posts/{id}
+Uppdaterar post – bara om userId är samma som författaren.
+
+DELETE /api/Posts/{id}?userId=...
+Tar bort post – bara om userId är samma som författaren.
+
+✅ Detta uppfyller kravet: “Bara den användare som skapat inlägget kan uppdatera eller ta bort.”
+
+E) CommentsController – kommentera + läsa kommentarer per post
+
+POST /api/Comments
+Skapar kommentar, men:
+
+userId måste finnas
+
+post måste finnas
+
+man får inte kommentera sina egna inlägg
+
+text får inte vara tom
+
+GET /api/Comments/by-post/{postId}
+Hämtar alla kommentarer för en viss post.
+
+6) Swagger och TestController
+
+Jag använder Swagger för att dokumentera och testa endpoints.
+Jag har även en enkel endpoint:
+
+GET /api/Test → “API is working ✅”
+
+Den använder jag om jag vill snabbt verifiera att API:t kör.
+
+✅ 7) Demo-scenario (5 minuter – perfekt för redovisning)
+
+Så här visar jag att allt fungerar:
+
+Register user1 (Zara)
+
+Register user2 (Sara)
+
+Login → få userId
+
+Skapa post som Sara (POST /api/Posts)
+
+Skapa kommentar som Zara på Saras post (POST /api/Comments) ✅
+
+Försök kommentera på egen post → ska ge 400 ✅
+
+Sök posts på titel och kategori ✅
+
+Uppdatera/tar bort post med fel userId → ska ge 403 ✅
