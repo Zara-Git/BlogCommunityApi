@@ -1,6 +1,7 @@
 ﻿using BlogCommunityApi.Data;
 using BlogCommunityApi.Repositories;
 using BlogCommunityApi.Services;
+using BlogCommunityApi.Services.Interfaces;
 using BlogCommunityApi.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -21,18 +22,36 @@ builder.Services.AddControllers();
 // Database
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(cs));
 
-// DI
+// CORS (för React / frontend)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+    );
+});
+
+// DI - Repositories
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+
+// DI - Services
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<RefreshTokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<ICommentService, CommentService>();
 
 // Auth (JWT)
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         var jwt = builder.Configuration.GetSection("JwtSettings");
         var key = jwt["Key"];
+
         if (string.IsNullOrWhiteSpace(key))
             throw new InvalidOperationException("JwtSettings:Key saknas i appsettings.");
 
@@ -42,8 +61,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+
             ValidIssuer = jwt["Issuer"],
             ValidAudience = jwt["Audience"],
+
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
             ClockSkew = TimeSpan.FromMinutes(2)
         };
@@ -82,6 +103,12 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // Pipeline
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/error");
+    app.UseHsts();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -89,7 +116,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowFrontend");
+
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
+
 app.Run();
