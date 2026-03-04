@@ -1,4 +1,4 @@
-﻿✅ Förklaring av hela projektet (på svenska) – “Community Web API”
+﻿✅ Förklaring av hela projektet  “Community Web API”
 1) Översikt – vad jag har byggt
 
 Jag har byggt ett Web API i ASP.NET Core för ett community där användare kan:

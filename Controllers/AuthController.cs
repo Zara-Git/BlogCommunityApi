@@ -1,10 +1,6 @@
-﻿using BlogCommunityApi.Data;
-using BlogCommunityApi.DTOs;
-using BlogCommunityApi.Models;
-using BlogCommunityApi.Services;
-using Microsoft.AspNetCore.Identity;
+﻿using BlogCommunityApi.DTOs;
+using BlogCommunityApi.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace BlogCommunityApi.Controllers;
 
@@ -12,60 +8,26 @@ namespace BlogCommunityApi.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly AppDbContext _db;
-    private readonly JwtService _jwtService;
+    private readonly IAuthService _auth;
 
-    public AuthController(AppDbContext db, JwtService jwtService)
-    {
-        _db = db;
-        _jwtService = jwtService;
-    }
+    public AuthController(IAuthService auth) => _auth = auth;
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req)
     {
-        var usernameExists = await _db.Users.AnyAsync(u => u.Username == req.Username);
-        if (usernameExists) return Conflict("Username already exists.");
+        var (ok, error, result) = await _auth.RegisterAsync(req);
+        if (!ok) return Conflict(error);
 
-        var emailExists = await _db.Users.AnyAsync(u => u.Email == req.Email);
-        if (emailExists) return Conflict("Email already exists.");
-
-        var user = new User
-        {
-            Username = req.Username.Trim(),
-            Email = req.Email.Trim().ToLower()
-        };
-
-        var hasher = new PasswordHasher<User>();
-        user.PasswordHash = hasher.HashPassword(user, req.Password);
-
-        _db.Users.Add(user);
-        await _db.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(Register), new { id = user.Id },
-            new { userId = user.Id, user.Username, user.Email });
+        // CreatedAtAction 
+        return CreatedAtAction(nameof(Register), result);
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest req)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == req.Username);
-        if (user is null) return Unauthorized("Invalid username or password.");
+        var (ok, error, result) = await _auth.LoginAsync(req);
+        if (!ok) return Unauthorized(error);
 
-        var hasher = new PasswordHasher<User>();
-        var result = hasher.VerifyHashedPassword(user, user.PasswordHash, req.Password);
-
-        if (result == PasswordVerificationResult.Failed)
-            return Unauthorized("Invalid username or password.");
-
-        var token = _jwtService.CreateToken(user.Id, user.Email);
-
-        return Ok(new AuthResponse
-        {
-            UserId = user.Id,
-            Username = user.Username,
-            Token = token,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(60)
-        });
+        return Ok(result);
     }
 }

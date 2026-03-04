@@ -26,6 +26,8 @@ public class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
+    
+
     // POST /api/Categories  (optional)
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCategoryDto dto)

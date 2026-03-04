@@ -1,4 +1,5 @@
 ﻿using BlogCommunityApi.Data;
+using BlogCommunityApi.Repositories;
 using BlogCommunityApi.Services;
 using BlogCommunityApi.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,28 +10,31 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Read + validate connection string FIRST (ONLY ONCE)
+// Config
 var cs = builder.Configuration.GetConnectionString("DefaultConnection");
-Console.WriteLine($">>> ENV = {builder.Environment.EnvironmentName}");
-Console.WriteLine($">>> DefaultConnection = [{cs}]");
-
 if (string.IsNullOrWhiteSpace(cs))
-    throw new InvalidOperationException("Missing/empty ConnectionStrings:DefaultConnection. Check appsettings + environment variables.");
+    throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection");
 
+// Controllers
 builder.Services.AddControllers();
 
-// DbContext (EF Core + SQL Server)
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(cs));
+// Database
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(cs));
 
-// JWT
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+// DI
+builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<JwtService>();
+builder.Services.AddScoped<RefreshTokenService>();
 
+// Auth (JWT)
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         var jwt = builder.Configuration.GetSection("JwtSettings");
+        var key = jwt["Key"];
+        if (string.IsNullOrWhiteSpace(key))
+            throw new InvalidOperationException("JwtSettings:Key saknas i appsettings.");
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -40,13 +44,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = jwt["Issuer"],
             ValidAudience = jwt["Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
             ClockSkew = TimeSpan.FromMinutes(2)
         };
     });
 
-// Swagger + Security
-builder.Services.AddScoped<RefreshTokenService>();
+builder.Services.AddAuthorization();
+
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -59,7 +64,7 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Enter: Bearer {your JWT token}"
+        Description = "Skriv: Bearer {din JWT token}"
     });
 
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -67,11 +72,7 @@ builder.Services.AddSwaggerGen(c =>
         {
             new OpenApiSecurityScheme
             {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
             Array.Empty<string>()
         }
@@ -80,6 +81,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+// Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -87,9 +89,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 app.Run();
