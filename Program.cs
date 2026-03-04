@@ -42,6 +42,7 @@ builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<IPostRepository, PostRepository>();
 
 // Auth (JWT)
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
