@@ -8,7 +8,7 @@ public class TestController : ControllerBase
 {
     // GET /api/Test
     [HttpGet]
-    public IActionResult Ping() => Ok("API is working ✅");
+    public IActionResult Ping() => Ok("API is working ");
     // Ping-endpoint för snabb kontroll att API:t kör:
     // - Om detta svarar 200 OK så fungerar servern och routing
     // - Bra för felsökning när Swagger/Postman inte fungerar

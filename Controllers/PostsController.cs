@@ -52,7 +52,7 @@ public class PostsController : ControllerBase
         var (ok, status, error, result) = await _service.CreateAsync(userId, req);
         if (!ok) return StatusCode(status, error);
 
-        return CreatedAtAction(nameof(GetAll), result);
+        return CreatedAtAction(nameof(GetAll), new { message = "Post created", result });
     }
 
     [Authorize]
@@ -61,22 +61,10 @@ public class PostsController : ControllerBase
     {
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
         if (!TryGetUserId(out var userId)) return Unauthorized("Invalid token claims.");
-
-        var (ok, status, error, result) = await _service.UpdateAsync(userId, id, req);
+        var (ok, status, error, _) = await _service.UpdateAsync(userId, id, req);
         if (!ok) return StatusCode(status, error);
 
-        return Ok(result);
+        return Ok(new { message = "Post updated", id });
     }
 
-    [Authorize]
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete([FromRoute] int id)
-    {
-        if (!TryGetUserId(out var userId)) return Unauthorized("Invalid token claims.");
-
-        var (ok, status, error) = await _service.DeleteAsync(userId, id);
-        if (!ok) return StatusCode(status, error);
-
-        return NoContent();
-    }
 }

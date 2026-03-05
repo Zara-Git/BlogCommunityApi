@@ -1,4 +1,4 @@
-using BlogCommunityApi.DTOs;
+﻿using BlogCommunityApi.DTOs;
 using BlogCommunityApi.Models;
 using BlogCommunityApi.Repositories;
 using BlogCommunityApi.Services.Interfaces;
@@ -21,6 +21,14 @@ namespace BlogCommunityApi.Services
 
         public async Task<(bool ok, string? error, object? result)> RegisterAsync(RegisterRequest req)
         {
+            // Validering (undvik null + tomma fält)
+            if (req is null) return (false, "Request body is required.", null);
+
+            if (string.IsNullOrWhiteSpace(req.Username) ||
+                string.IsNullOrWhiteSpace(req.Email) ||
+                string.IsNullOrWhiteSpace(req.Password))
+                return (false, "Username, email and password are required.", null);
+
             var username = req.Username.Trim();
             var email = req.Email.Trim().ToLower();
 

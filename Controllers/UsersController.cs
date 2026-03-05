@@ -1,10 +1,7 @@
-﻿using BlogCommunityApi.Data;
-using BlogCommunityApi.DTOs;
-using BlogCommunityApi.Models;
+﻿using BlogCommunityApi.DTOs;
+using BlogCommunityApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace BlogCommunityApi.Controllers;
@@ -13,80 +10,60 @@ namespace BlogCommunityApi.Controllers;
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    private readonly IUserService _service;
+    public UsersController(IUserService service) => _service = service;
 
-    public UsersController(AppDbContext db) => _db = db;
-
-    private int GetUserId()
+    // Hämtar userId från JWT (claims). Returnerar false om claim saknas/är fel.
+    private bool TryGetUserId(out int userId)
     {
         var idStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
                     ?? User.FindFirstValue("sub");
 
-        if (!int.TryParse(idStr, out var userId))
-            throw new UnauthorizedAccessException("Invalid token claims.");
-
-        return userId;
+        return int.TryParse(idStr, out userId);
     }
 
     [Authorize]
     [HttpPut("me")]
     public async Task<IActionResult> UpdateMe([FromBody] UpdateUserRequest dto)
     {
+        // Validerar att body finns
+        if (dto is null) return BadRequest("Request body is required.");
+
+        // Validerar DTO-regler (om du har DataAnnotations på DTO)
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
 
-        var userId = GetUserId();
+        // Säkerställer att token har korrekt userId
+        if (!TryGetUserId(out var userId))
+            return Unauthorized("Invalid token claims.");
 
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId);
-        if (user == null) return NotFound("User not found.");
+        // Om inget fält skickas, finns inget att uppdatera
+        var nothingToUpdate =
+            string.IsNullOrWhiteSpace(dto.Username) &&
+            string.IsNullOrWhiteSpace(dto.Email) &&
+            string.IsNullOrWhiteSpace(dto.NewPassword);
 
-        if (!string.IsNullOrWhiteSpace(dto.Username))
-        {
-            var newUsername = dto.Username.Trim();
-            var usernameTaken = await _db.Users.AnyAsync(u => u.Username == newUsername && u.Id != userId);
-            if (usernameTaken) return Conflict("Username already exists.");
-            user.Username = newUsername;
-        }
+        if (nothingToUpdate)
+            return BadRequest("Nothing to update.");
 
-        if (!string.IsNullOrWhiteSpace(dto.Email))
-        {
-            var newEmail = dto.Email.Trim().ToLower();
-            var emailTaken = await _db.Users.AnyAsync(u => u.Email == newEmail && u.Id != userId);
-            if (emailTaken) return Conflict("Email already exists.");
-            user.Email = newEmail;
-        }
+        // Business logic ligger i service-lagret
+        var (ok, status, error, result) = await _service.UpdateMeAsync(userId, dto);
 
-        if (!string.IsNullOrWhiteSpace(dto.NewPassword))
-        {
-            var hasher = new PasswordHasher<User>();
-            user.PasswordHash = hasher.HashPassword(user, dto.NewPassword);
-        }
-
-        await _db.SaveChangesAsync();
-        return Ok(new { user.Id, user.Username, user.Email });
+        if (!ok) return StatusCode(status, error);
+        return Ok(result);
     }
 
     [Authorize]
     [HttpDelete("me")]
     public async Task<IActionResult> DeleteMe()
     {
-        var userId = GetUserId();
+        // Säkerställer att token har korrekt userId
+        if (!TryGetUserId(out var userId))
+            return Unauthorized("Invalid token claims.");
 
-        var user = await _db.Users
-            .Include(u => u.Posts)
-            .Include(u => u.Comments)
-            .Include(u => u.RefreshTokens)
-            .FirstOrDefaultAsync(u => u.Id == userId);
+        // Tar bort användaren (inkl. relaterad data enligt repo/service)
+        var (ok, status, error) = await _service.DeleteMeAsync(userId);
 
-        if (user == null) return NotFound("User not found.");
-
-        // Avoid FK issues with Restrict rules
-        _db.Comments.RemoveRange(user.Comments);
-        _db.Posts.RemoveRange(user.Posts);
-        _db.RefreshTokens.RemoveRange(user.RefreshTokens);
-
-        _db.Users.Remove(user);
-        await _db.SaveChangesAsync();
-
-        return NoContent();
+        if (!ok) return StatusCode(status, error);
+        return NoContent(); // 204
     }
 }

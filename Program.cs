@@ -19,6 +19,7 @@ if (string.IsNullOrWhiteSpace(cs))
 // Controllers
 builder.Services.AddControllers();
 
+
 // Database
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlServer(cs));
 
@@ -31,18 +32,19 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
     );
 });
-
 // DI - Repositories
 builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+builder.Services.AddScoped<IPostRepository, PostRepository>();
 
 // DI - Services
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<RefreshTokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
-builder.Services.AddScoped<IPostRepository, PostRepository>();
+builder.Services.AddScoped<IPostService, PostService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 // Auth (JWT)
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
