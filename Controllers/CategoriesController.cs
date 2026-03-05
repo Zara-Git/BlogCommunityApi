@@ -13,8 +13,8 @@ public class CategoriesController : ControllerBase
     private readonly AppDbContext _db;
     public CategoriesController(AppDbContext db) => _db = db;
 
-    // GET /api/Categories  (public)
-    [HttpGet]
+    // GET /api/Categories
+    // [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var categories = await _db.Categories
@@ -26,13 +26,13 @@ public class CategoriesController : ControllerBase
         return Ok(categories);
     }
 
-    
-
-    // POST /api/Categories  (optional)
-    [HttpPost]
+     // POST /api/Categories
+    // [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCategoryDto dto)
     {
+        if (dto is null) return BadRequest("Request body is required.");
         if (!ModelState.IsValid) return ValidationProblem(ModelState);
+        if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
 
         var name = dto.Name.Trim();
         var exists = await _db.Categories.AnyAsync(c => c.Name == name);

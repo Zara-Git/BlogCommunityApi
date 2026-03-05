@@ -1,21 +1,23 @@
-using BlogCommunityApi.Data;
+﻿using BlogCommunityApi.Data;
 using BlogCommunityApi.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace BlogCommunityApi.Repositories
 {
+    // Repository: databasaccess för kommentarer (EF Core)
     public class CommentRepository : ICommentRepository
     {
         private readonly AppDbContext _db;
         public CommentRepository(AppDbContext db) => _db = db;
 
-        public async Task<Post?> GetPostByIdAsync(int postId)
-        {
-            return await _db.Posts.AsNoTracking().FirstOrDefaultAsync(p => p.Id == postId);
-        }
+        // Hämtar ett inlägg för att kontrollera att det finns (och för "egen post"-regeln)
+        public Task<Post?> GetPostByIdAsync(int postId)
+            => _db.Posts.AsNoTracking().FirstOrDefaultAsync(p => p.Id == postId);
 
+        // Sparar en ny kommentar i databasen
         public async Task<Comment> AddAsync(Comment comment)
         {
             _db.Comments.Add(comment);
@@ -23,6 +25,7 @@ namespace BlogCommunityApi.Repositories
             return comment;
         }
 
+        // Hämtar alla kommentarer för ett visst inlägg (inkl. författare)
         public async Task<List<object>> GetByPostAsync(int postId)
         {
             return await _db.Comments

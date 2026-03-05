@@ -6,13 +6,16 @@ namespace BlogCommunityApi.DTOs;
 // UserId hämtas från JWT (inloggad användare), därför skickas det inte i body.
 public class CreatePostRequest
 {
-    [Required, MaxLength(120)]
-    public string Title { get; set; } = "";
+    [Required(ErrorMessage = "Title är obligatoriskt.")]
+    [MaxLength(120, ErrorMessage = "Title får max vara 120 tecken.")]
+    public string Title { get; set; } = string.Empty;
 
-    [Required]
-    public string Text { get; set; } = "";
+    [Required(ErrorMessage = "Text är obligatoriskt.")]
+    [MaxLength(5000, ErrorMessage = "Text får max vara 5000 tecken.")]
+    public string Text { get; set; } = string.Empty;
 
-    [Required]
+    [Required(ErrorMessage = "CategoryId är obligatoriskt.")]
+    [Range(1, int.MaxValue, ErrorMessage = "CategoryId måste vara större än 0.")]
     public int CategoryId { get; set; }
 }
 
@@ -20,12 +23,15 @@ public class CreatePostRequest
 // Ägarkontroll görs via JWT (current user) + postens UserId i databasen.
 public class UpdatePostRequest
 {
-    [Required, MaxLength(120)]
-    public string Title { get; set; } = "";
+    [Required(ErrorMessage = "Title är obligatoriskt.")]
+    [MaxLength(120, ErrorMessage = "Title får max vara 120 tecken.")]
+    public string Title { get; set; } = string.Empty;
 
-    [Required]
-    public string Text { get; set; } = "";
+    [Required(ErrorMessage = "Text är obligatoriskt.")]
+    [MaxLength(5000, ErrorMessage = "Text får max vara 5000 tecken.")]
+    public string Text { get; set; } = string.Empty;
 
-    [Required]
+    [Required(ErrorMessage = "CategoryId är obligatoriskt.")]
+    [Range(1, int.MaxValue, ErrorMessage = "CategoryId måste vara större än 0.")]
     public int CategoryId { get; set; }
 }

@@ -1,31 +1,34 @@
-﻿using System.ComponentModel.DataAnnotations;   // DataAnnotations – validering som [Required], [MaxLength]
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace BlogCommunityApi.Models;
 
 // Entity/Model för tabellen "Posts"
-// Den här klassen beskriver ett blogginlägg och dess relationer till User, Category och Comments.
 public class Post
 {
-    public int Id { get; set; }                         // Primärnyckel (auto-increment i databasen)
+    // Primärnyckel (PK)
+    public int Id { get; set; }
 
-    [Required, MaxLength(120)]                          // Titel är obligatorisk + max 120 tecken
-    public string Title { get; set; } = "";             // Inläggets titel
+    // Titel: krävs + maxlängd
+    [Required]
+    [MaxLength(120)]
+    public string Title { get; set; } = string.Empty;
 
-    [Required]                                          // Texten är obligatorisk
-    public string Text { get; set; } = "";              // Inläggets innehåll (brödtext)
+    // Text: krävs + maxlängd (för att skydda DB från extremt långa texter)
+    [Required]
+    [MaxLength(5000)]
+    public string Text { get; set; } = string.Empty;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    // När inlägget skapades (UTC). Default sätts när objektet skapas.
+    // Skapad tidpunkt (UTC) - kan sättas i service vid skapande
+    public DateTime CreatedAt { get; set; }
 
-    // Koppling till User (författare)
-    public int UserId { get; set; }                     // Foreign Key: vilken användare som skapade inlägget
-    public User? User { get; set; }                     // Navigation property: referens till User-objektet
+    // FK: författare (User)
+    public int UserId { get; set; }
+    public User? User { get; set; }
 
-    // Koppling till Category (kategori)
-    public int CategoryId { get; set; }                 // Foreign Key: vilken kategori inlägget tillhör
-    public Category? Category { get; set; }             // Navigation property: referens till Category-objektet
+    // FK: kategori (Category)
+    public int CategoryId { get; set; }
+    public Category? Category { get; set; }
 
-    // Koppling till Comments (kommentarer)
+    // Navigation: kommentarer för detta inlägg
     public List<Comment> Comments { get; set; } = new();
-    // Navigation property: en post kan ha många kommentarer (1 post -> många comments)
 }

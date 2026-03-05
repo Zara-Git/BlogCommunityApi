@@ -1,19 +1,27 @@
-﻿namespace BlogCommunityApi.Models;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace BlogCommunityApi.Models;
 
 // Entity/Model för tabellen "Comments"
-// Den här klassen beskriver hur en kommentar ser ut i databasen och hur den kopplas till Post och User.
+// Beskriver en kommentar och kopplingen till Post och User.
 public class Comment
 {
-    public int Id { get; set; }                        // Primärnyckel (auto-increment i databasen)
+    // Primärnyckel (PK)
+    public int Id { get; set; }
 
-    public string Text { get; set; } = "";             // Själva kommentaren (texten som användaren skriver)
+    // Kommentartext (krävs + maxlängd)
+    [Required]
+    [MaxLength(500)]
+    public string Text { get; set; } = string.Empty;
 
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    // När kommentaren skapades (UTC). Default sätts direkt när objektet skapas.
+    // Skapad tidpunkt (sätts i service vid skapande)
+    public DateTime CreatedAt { get; set; }
 
-    public int PostId { get; set; }                    // Foreign Key: vilket inlägg kommentaren tillhör
-    public Post? Post { get; set; }                    // Navigation property: referens till Post-objektet
+    // FK: vilket inlägg kommentaren tillhör
+    public int PostId { get; set; }
+    public Post? Post { get; set; }
 
-    public int UserId { get; set; }                    // Foreign Key: vilken användare som skrev kommentaren
-    public User? User { get; set; }                    // Navigation property: referens till User-objektet
+    // FK: vilken användare som skrev kommentaren
+    public int UserId { get; set; }
+    public User? User { get; set; }
 }
