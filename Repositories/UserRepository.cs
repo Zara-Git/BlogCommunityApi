@@ -10,7 +10,7 @@ namespace BlogCommunityApi.Repositories
         private readonly AppDbContext _db;
         public UserRepository(AppDbContext db) => _db = db;
 
-        // ===== Auth =====
+        //  Auth 
 
         // Kollar om username redan finns
         public Task<bool> UsernameExistsAsync(string username)
@@ -32,7 +32,7 @@ namespace BlogCommunityApi.Repositories
             return user;
         }
 
-        // ===== Update =====
+        //  Update 
 
         // Hämtar user för uppdatering (tracking behövs)
         public Task<User?> GetByIdAsync(int id)
@@ -50,7 +50,7 @@ namespace BlogCommunityApi.Repositories
         public Task SaveChangesAsync()
             => _db.SaveChangesAsync();
 
-        // ===== Delete =====
+        //  Delete 
 
         // Hämtar user + relationer för att kunna ta bort utan FK-problem
         public Task<User?> GetUserWithRelationsAsync(int id)
